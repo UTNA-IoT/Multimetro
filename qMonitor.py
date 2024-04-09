@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLCDNumber,QLabel,QPushButton, QMessageBox)
 import serial, time
+
 class Display(QLCDNumber):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -35,9 +36,11 @@ class VentanaPrincipal(QMainWindow):
         self.setWindowTitle("Multimetro PC")
         self.setFixedWidth(500)
         self.setFixedHeight(300)
+        self.statusBar=self.statusBar()
+        self.statusBar.showMessage("Listo")
         self.panelVoltaje=Panel("VOLTAJE")
         self.panelCorriente=Panel("CORRIENTE")
-        botonRecibir=QPushButton("Abre Puerto")
+        botonRecibir=QPushButton("Lectura Voltaje")
         botonRecibir.clicked.connect(self.confirma)
         # layout
         layoutVertical = QVBoxLayout()
@@ -56,20 +59,33 @@ class VentanaPrincipal(QMainWindow):
     def confirma(self):
         dialogoEnviar = QMessageBox(self)
         dialogoEnviar.setWindowTitle("Monitor")
-        dialogoEnviar.setText("Desea Abrir el puerto?")
+        dialogoEnviar.setText("Desea medir voltaje?")
         dialogoEnviar.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         botonSeleccionado = dialogoEnviar.exec()
         if botonSeleccionado == QMessageBox.Yes:
-            self.abrePuerto()
+            self.statusBar.showMessage("Abriendo Puerto")
+            self.configuraPuerto()
         else:
             print("Cancel")
 
+    def configuraPuerto(self):
+        with serial.Serial() as self.puerto:
+            self.puerto.baudrate=9600
+            self.puerto.port= 'COM11'
+            self.statusBar.showMessage("Configura Puerto")
+            self.abrePuerto()
+
     def abrePuerto(self):
-        #while True:
-            with serial.Serial('/dev/ttyACM0', 9600) as ser:
-                line = ser.readline()
-                cadena=line.decode("utf-8")
-                self.actualizaVoltaje(cadena)
+        self.statusBar.showMessage("Lectura")
+        self.puerto.open()
+        lecturaVoltaje=self.puerto.readline()
+        svoltaje=lecturaVoltaje.decode('utf-8')
+        voltaje=svoltaje.strip()
+        #self.statusBar.showMessage(svoltaje)
+        self.actualizaVoltaje(float(voltaje))
+        self.puerto.close()
+        self.statusBar.showMessage("Listo")
+
 
 
 if __name__ == '__main__':
